@@ -1,5 +1,7 @@
 # CareCompass
-A low level implementation of a holistic well-being app
+A low level implementation of a holistic well-being app.
+
+
 Here is the process to run it on your local machine:
 
 1. Clone this repo
