@@ -54,7 +54,7 @@ def diet_recommendation_app():
     diet_type = st.selectbox("Select your diet type:", ["vegan", "vegetarian", "paleo", "keto", "gluten-free"])
 
     # API Key from environment variables
-    api_key = os.getenv("spoonacular_api_key")
+    api_key = os.getenv("SPOONACULAR_API_KEY")
 
     if st.button("Get Recommendations"):
         if api_key:
