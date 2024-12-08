@@ -1,5 +1,5 @@
 # CareCompass
-A low level implementation of a holistic well-being app.
+An AI based holistic well-being app.
 
 
 Here is the process to run it on your local machine:
