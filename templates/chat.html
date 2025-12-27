@@ -172,6 +172,56 @@
         gap: 0.5rem;
         align-items: center;
     }
+    
+    /* Suggested prompts */
+    .suggested-prompts {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--pico-muted-background);
+        border-radius: var(--pico-border-radius);
+    }
+    
+    .suggested-prompts p {
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .prompt-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .prompt-buttons button {
+        margin: 0;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    
+    /* Voice input button */
+    .voice-btn {
+        width: auto;
+        margin-bottom: 0;
+        padding: 0.5rem 0.75rem;
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    
+    .voice-btn.recording {
+        background: #dc2626;
+        border-color: #dc2626;
+        animation: pulse-recording 1.5s infinite;
+    }
+    
+    @keyframes pulse-recording {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .voice-btn:disabled {
+        display: none;
+    }
 </style>
 {% endblock %}
 
@@ -207,8 +257,33 @@
            required
            autocomplete="off"
            {% if not is_configured %}disabled{% endif %}>
+    <button type="button" id="voice-btn" class="voice-btn outline" onclick="toggleVoiceInput()" 
+            title="Voice input" {% if not is_configured %}disabled{% endif %}>
+        &#127908;
+    </button>
     <button type="submit" id="send-btn" {% if not is_configured %}disabled{% endif %}>Send</button>
 </form>
+
+<div class="suggested-prompts" id="suggested-prompts">
+    <p class="secondary">Try asking:</p>
+    <div class="prompt-buttons">
+        <button class="outline" onclick="useSuggestion('What are common symptoms of the flu?')">
+            Flu symptoms
+        </button>
+        <button class="outline" onclick="useSuggestion('How can I improve my sleep quality?')">
+            Sleep tips
+        </button>
+        <button class="outline" onclick="useSuggestion('What foods help boost immunity?')">
+            Immunity foods
+        </button>
+        <button class="outline" onclick="useSuggestion('When should I see a doctor for a headache?')">
+            Headache advice
+        </button>
+        <button class="outline" onclick="useSuggestion('What are the benefits of drinking more water?')">
+            Hydration benefits
+        </button>
+    </div>
+</div>
 
 <div class="chat-actions">
     <button class="outline secondary" id="clear-btn" onclick="clearChat()">
@@ -230,10 +305,78 @@
     const messageInput = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
     const clearBtn = document.getElementById('clear-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+    const suggestedPrompts = document.getElementById('suggested-prompts');
     
     let isStreaming = false;
     let currentUserMessage = '';
     let currentAssistantMessage = '';
+    
+    // Voice input setup
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const speechSupported = !!SpeechRecognition;
+    let recognition = null;
+    let isListening = false;
+    
+    // Hide voice button if not supported
+    if (!speechSupported && voiceBtn) {
+        voiceBtn.style.display = 'none';
+    }
+    
+    function toggleVoiceInput() {
+        if (!speechSupported) return;
+        
+        if (isListening) {
+            recognition.stop();
+            return;
+        }
+        
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        recognition.onstart = () => {
+            isListening = true;
+            voiceBtn.classList.add('recording');
+            voiceBtn.innerHTML = '&#9899;'; // Recording dot
+            messageInput.placeholder = 'Listening...';
+        };
+        
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            messageInput.value = transcript;
+        };
+        
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            stopListening();
+        };
+        
+        recognition.onend = () => {
+            stopListening();
+        };
+        
+        recognition.start();
+    }
+    
+    function stopListening() {
+        isListening = false;
+        if (voiceBtn) {
+            voiceBtn.classList.remove('recording');
+            voiceBtn.innerHTML = '&#127908;'; // Microphone emoji
+        }
+        messageInput.placeholder = 'Type your health question...';
+    }
+    
+    // Suggested prompts
+    function useSuggestion(text) {
+        messageInput.value = text;
+        if (suggestedPrompts) {
+            suggestedPrompts.style.display = 'none';
+        }
+        messageInput.focus();
+    }
     
     // Scroll to bottom
     function scrollToBottom() {
@@ -318,9 +461,15 @@
         messageInput.disabled = true;
         sendBtn.disabled = true;
         clearBtn.disabled = true;
+        if (voiceBtn) voiceBtn.disabled = true;
         isStreaming = true;
         currentUserMessage = message;
         currentAssistantMessage = '';
+        
+        // Hide suggested prompts after first message
+        if (suggestedPrompts) {
+            suggestedPrompts.style.display = 'none';
+        }
         
         // Add user message immediately
         addMessage('user', message);
@@ -396,6 +545,7 @@
             messageInput.disabled = false;
             sendBtn.disabled = false;
             clearBtn.disabled = false;
+            if (voiceBtn) voiceBtn.disabled = false;
             isStreaming = false;
             messageInput.focus();
         }

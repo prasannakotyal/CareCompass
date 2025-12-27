@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Health Tools - CareCompass{% endblock %}
+
+{% block head %}
+<style>
+    .calculator-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .calculator-card {
+        margin: 0;
+    }
+    
+    .calculator-card header {
+        padding-bottom: 0.5rem;
+    }
+    
+    .calculator-card header h3 {
+        margin: 0;
+    }
+    
+    .result-box {
+        padding: 1rem;
+        background: var(--pico-muted-background);
+        border-radius: var(--pico-border-radius);
+        text-align: center;
+        margin-top: 1rem;
+    }
+    
+    .result-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--pico-primary);
+        line-height: 1.2;
+    }
+    
+    .result-label {
+        font-size: 0.875rem;
+        color: var(--pico-muted-color);
+        margin-top: 0.25rem;
+    }
+    
+    .result-category {
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--pico-border-radius);
+        display: inline-block;
+        font-weight: 500;
+    }
+    
+    .category-underweight {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .category-normal {
+        background: #dcfce7;
+        color: #166534;
+    }
+    
+    .category-overweight {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .category-obese {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .input-group {
+        margin-bottom: 1rem;
+    }
+    
+    .input-group label {
+        margin-bottom: 0.25rem;
+    }
+    
+    .input-group input,
+    .input-group select {
+        margin-bottom: 0;
+    }
+    
+    .info-text {
+        font-size: 0.8rem;
+        color: var(--pico-muted-color);
+        margin-top: 0.5rem;
+    }
+    
+    .water-drops {
+        font-size: 1.5rem;
+        letter-spacing: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Health Tools</h1>
+    <p>Calculate your BMI, daily water intake, and calorie needs.</p>
+</hgroup>
+
+<div class="calculator-grid">
+    <!-- BMI Calculator -->
+    <article class="calculator-card" x-data="bmiCalculator()">
+        <header>
+            <h3>BMI Calculator</h3>
+            <p class="secondary">Body Mass Index</p>
+        </header>
+        
+        <div class="input-group">
+            <label for="height">Height (cm)</label>
+            <input type="number" id="height" x-model="height" min="100" max="250" placeholder="170">
+        </div>
+        
+        <div class="input-group">
+            <label for="weight">Weight (kg)</label>
+            <input type="number" id="weight" x-model="weight" min="30" max="300" placeholder="70">
+        </div>
+        
+        <button @click="calculate()" :disabled="!height || !weight">Calculate BMI</button>
+        
+        <div class="result-box" x-show="bmi > 0" x-cloak>
+            <div class="result-value" x-text="bmi.toFixed(1)"></div>
+            <div class="result-label">Your BMI</div>
+            <div class="result-category" :class="categoryClass" x-text="category"></div>
+        </div>
+        
+        <p class="info-text">BMI is a screening tool and does not diagnose body fatness or health.</p>
+    </article>
+    
+    <!-- Water Intake Calculator -->
+    <article class="calculator-card" x-data="waterCalculator()">
+        <header>
+            <h3>Water Intake</h3>
+            <p class="secondary">Daily hydration needs</p>
+        </header>
+        
+        <div class="input-group">
+            <label for="water-weight">Weight (kg)</label>
+            <input type="number" id="water-weight" x-model="weight" min="30" max="200" placeholder="70">
+        </div>
+        
+        <div class="input-group">
+            <label for="activity">Activity Level</label>
+            <select id="activity" x-model="activity">
+                <option value="sedentary">Sedentary (little/no exercise)</option>
+                <option value="light">Light (1-3 days/week)</option>
+                <option value="moderate">Moderate (3-5 days/week)</option>
+                <option value="active">Active (6-7 days/week)</option>
+                <option value="very_active">Very Active (athlete)</option>
+            </select>
+        </div>
+        
+        <button @click="calculate()" :disabled="!weight">Calculate Water Intake</button>
+        
+        <div class="result-box" x-show="liters > 0" x-cloak>
+            <div class="result-value" x-text="liters.toFixed(1) + 'L'"></div>
+            <div class="result-label">Recommended daily water intake</div>
+            <div class="water-drops" x-text="getWaterDrops()"></div>
+        </div>
+        
+        <p class="info-text">Adjust based on climate, health conditions, and individual needs.</p>
+    </article>
+    
+    <!-- Calorie Calculator -->
+    <article class="calculator-card" x-data="calorieCalculator()">
+        <header>
+            <h3>Calorie Needs</h3>
+            <p class="secondary">Daily energy expenditure (TDEE)</p>
+        </header>
+        
+        <div class="grid">
+            <div class="input-group">
+                <label for="cal-age">Age</label>
+                <input type="number" id="cal-age" x-model="age" min="15" max="100" placeholder="30">
+            </div>
+            
+            <div class="input-group">
+                <label for="cal-gender">Gender</label>
+                <select id="cal-gender" x-model="gender">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="input-group">
+                <label for="cal-height">Height (cm)</label>
+                <input type="number" id="cal-height" x-model="height" min="100" max="250" placeholder="170">
+            </div>
+            
+            <div class="input-group">
+                <label for="cal-weight">Weight (kg)</label>
+                <input type="number" id="cal-weight" x-model="weight" min="30" max="300" placeholder="70">
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label for="cal-activity">Activity Level</label>
+            <select id="cal-activity" x-model="activity">
+                <option value="1.2">Sedentary (office job)</option>
+                <option value="1.375">Light (1-3 days/week)</option>
+                <option value="1.55">Moderate (3-5 days/week)</option>
+                <option value="1.725">Active (6-7 days/week)</option>
+                <option value="1.9">Very Active (athlete)</option>
+            </select>
+        </div>
+        
+        <button @click="calculate()" :disabled="!age || !height || !weight">Calculate Calories</button>
+        
+        <div class="result-box" x-show="tdee > 0" x-cloak>
+            <div class="result-value" x-text="Math.round(tdee)"></div>
+            <div class="result-label">Calories/day to maintain weight</div>
+            <div style="margin-top: 0.75rem; font-size: 0.9rem;">
+                <span class="secondary">Lose weight: </span><strong x-text="Math.round(tdee - 500)"></strong> cal/day<br>
+                <span class="secondary">Gain weight: </span><strong x-text="Math.round(tdee + 500)"></strong> cal/day
+            </div>
+        </div>
+        
+        <p class="info-text">Based on Mifflin-St Jeor equation. Consult a professional for personalized advice.</p>
+    </article>
+    
+    <!-- Ideal Weight Calculator -->
+    <article class="calculator-card" x-data="idealWeightCalculator()">
+        <header>
+            <h3>Ideal Weight Range</h3>
+            <p class="secondary">Based on height and BMI</p>
+        </header>
+        
+        <div class="input-group">
+            <label for="ideal-height">Height (cm)</label>
+            <input type="number" id="ideal-height" x-model="height" min="100" max="250" placeholder="170">
+        </div>
+        
+        <button @click="calculate()" :disabled="!height">Calculate Ideal Weight</button>
+        
+        <div class="result-box" x-show="minWeight > 0" x-cloak>
+            <div class="result-value" x-text="minWeight.toFixed(1) + ' - ' + maxWeight.toFixed(1)"></div>
+            <div class="result-label">Healthy weight range (kg)</div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                <span class="secondary">Based on BMI 18.5 - 24.9</span>
+            </div>
+        </div>
+        
+        <p class="info-text">This range is a general guideline. Muscle mass, age, and body composition matter too.</p>
+    </article>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function bmiCalculator() {
+        return {
+            height: null,
+            weight: null,
+            bmi: 0,
+            category: '',
+            categoryClass: '',
+            
+            calculate() {
+                if (!this.height || !this.weight) return;
+                
+                const heightM = this.height / 100;
+                this.bmi = this.weight / (heightM * heightM);
+                
+                if (this.bmi < 18.5) {
+                    this.category = 'Underweight';
+                    this.categoryClass = 'category-underweight';
+                } else if (this.bmi < 25) {
+                    this.category = 'Normal weight';
+                    this.categoryClass = 'category-normal';
+                } else if (this.bmi < 30) {
+                    this.category = 'Overweight';
+                    this.categoryClass = 'category-overweight';
+                } else {
+                    this.category = 'Obese';
+                    this.categoryClass = 'category-obese';
+                }
+            }
+        }
+    }
+    
+    function waterCalculator() {
+        return {
+            weight: null,
+            activity: 'sedentary',
+            liters: 0,
+            
+            calculate() {
+                if (!this.weight) return;
+                
+                // Base: 30-35ml per kg of body weight
+                let base = this.weight * 0.033;
+                
+                // Adjust for activity
+                const multipliers = {
+                    'sedentary': 1.0,
+                    'light': 1.1,
+                    'moderate': 1.2,
+                    'active': 1.3,
+                    'very_active': 1.4
+                };
+                
+                this.liters = base * multipliers[this.activity];
+            },
+            
+            getWaterDrops() {
+                const glasses = Math.round(this.liters / 0.25); // 250ml per glass
+                return '💧'.repeat(Math.min(glasses, 12));
+            }
+        }
+    }
+    
+    function calorieCalculator() {
+        return {
+            age: null,
+            gender: 'male',
+            height: null,
+            weight: null,
+            activity: '1.2',
+            tdee: 0,
+            
+            calculate() {
+                if (!this.age || !this.height || !this.weight) return;
+                
+                // Mifflin-St Jeor Equation
+                let bmr;
+                if (this.gender === 'male') {
+                    bmr = 10 * this.weight + 6.25 * this.height - 5 * this.age + 5;
+                } else {
+                    bmr = 10 * this.weight + 6.25 * this.height - 5 * this.age - 161;
+                }
+                
+                this.tdee = bmr * parseFloat(this.activity);
+            }
+        }
+    }
+    
+    function idealWeightCalculator() {
+        return {
+            height: null,
+            minWeight: 0,
+            maxWeight: 0,
+            
+            calculate() {
+                if (!this.height) return;
+                
+                const heightM = this.height / 100;
+                // BMI 18.5 to 24.9
+                this.minWeight = 18.5 * heightM * heightM;
+                this.maxWeight = 24.9 * heightM * heightM;
+            }
+        }
+    }
+</script>
+{% endblock %}

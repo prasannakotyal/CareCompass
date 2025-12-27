@@ -12,6 +12,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from api.services import gemini, overpass, spoonacular
 
@@ -21,6 +24,9 @@ load_dotenv()
 # Get base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Initialize FastAPI app
 app = FastAPI(
     title="CareCompass",
@@ -28,6 +34,10 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
+
+# Add rate limiter to app state and exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -128,12 +138,19 @@ async def meals_page(request: Request):
     )
 
 
+@app.get("/health", response_class=HTMLResponse)
+async def health_tools_page(request: Request):
+    """Health tools page with BMI calculator and other utilities."""
+    return templates.TemplateResponse("health.html", {"request": request})
+
+
 # =============================================================================
 # API Routes - Chat
 # =============================================================================
 
 
 @app.post("/api/chat", response_class=HTMLResponse)
+@limiter.limit("20/minute")
 async def send_message(request: Request, message: str = Form(...)):
     """Send a message to MediChat (non-streaming fallback)."""
     # Get existing history
@@ -166,6 +183,7 @@ async def send_message(request: Request, message: str = Form(...)):
 
 
 @app.post("/api/chat/stream")
+@limiter.limit("20/minute")
 async def send_message_stream(request: Request, message: str = Form(...)):
     """Stream a chat response via Server-Sent Events."""
     # Get existing history
@@ -256,6 +274,7 @@ async def clear_chat(request: Request):
 
 
 @app.get("/api/nearby", response_class=HTMLResponse)
+@limiter.limit("30/minute")
 async def find_nearby(
     request: Request,
     lat: float = Query(...),
@@ -292,6 +311,7 @@ async def find_nearby(
 
 
 @app.get("/api/recipes", response_class=HTMLResponse)
+@limiter.limit("30/minute")
 async def search_recipes(
     request: Request,
     query: str = Query(""),
@@ -314,6 +334,7 @@ async def search_recipes(
 
 
 @app.get("/api/mealplan", response_class=HTMLResponse)
+@limiter.limit("10/minute")
 async def get_meal_plan(
     request: Request,
     calories: int = Query(2000),

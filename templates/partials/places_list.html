@@ -32,11 +32,15 @@
                 </td>
                 <td>{{ place.distance_km }} km</td>
                 <td>
+                    <a href="https://www.google.com/maps/dir/?api=1&origin={{ user_lat }},{{ user_lon }}&destination={{ place.lat }},{{ place.lon }}" 
+                       target="_blank" rel="noopener" class="directions-link">
+                       &#128205; Directions
+                    </a>
                     {% if place.phone %}
-                    <a href="tel:{{ place.phone }}">{{ place.phone }}</a><br>
+                    <br><a href="tel:{{ place.phone }}">{{ place.phone }}</a>
                     {% endif %}
                     {% if place.website %}
-                    <a href="{{ place.website }}" target="_blank" rel="noopener">Website</a>
+                    <br><a href="{{ place.website }}" target="_blank" rel="noopener">Website</a>
                     {% endif %}
                     {% if place.opening_hours %}
                     <br><small>{{ place.opening_hours }}</small>
@@ -72,6 +76,11 @@
         font-size: 0.625rem;
         font-weight: bold;
         margin-left: 0.25rem;
+    }
+    
+    .directions-link {
+        font-weight: 500;
+        white-space: nowrap;
     }
 </style>
 {% else %}

@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" 
+      x-data="{ darkMode: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches) }"
+      x-init="$watch('darkMode', val => { localStorage.setItem('theme', val ? 'dark' : 'light'); document.documentElement.setAttribute('data-theme', val ? 'dark' : 'light') }); document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')"
+      :data-theme="darkMode ? 'dark' : 'light'">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,6 +38,13 @@
                 <li><a href="/chat">MediChat</a></li>
                 <li><a href="/nearby">Healthcare Finder</a></li>
                 <li><a href="/meals">Meal Planner</a></li>
+                <li><a href="/health">Health Tools</a></li>
+                <li>
+                    <a href="#" @click.prevent="darkMode = !darkMode" role="button" class="outline secondary theme-toggle" title="Toggle dark mode">
+                        <span x-show="!darkMode">&#127769;</span>
+                        <span x-show="darkMode">&#9728;&#65039;</span>
+                    </a>
+                </li>
             </ul>
         </nav>
     </header>

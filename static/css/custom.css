@@ -1,5 +1,13 @@
 /* Custom styles for CareCompass */
 
+/* Theme toggle button */
+.theme-toggle {
+    padding: 0.25rem 0.5rem !important;
+    margin: 0 !important;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
 /* Hero section on home page */
 .hero {
     text-align: center;
@@ -18,12 +26,27 @@ article.warning p {
     color: #92400e;
 }
 
+/* Dark mode adjustments for warnings */
+[data-theme="dark"] article.warning {
+    background: #78350f;
+    border-left-color: #fbbf24;
+}
+
+[data-theme="dark"] article.warning p {
+    color: #fef3c7;
+}
+
 /* Error message styling */
 .error-message {
     padding: 1rem;
     background: #fee2e2;
     border-radius: var(--pico-border-radius);
     color: #991b1b;
+}
+
+[data-theme="dark"] .error-message {
+    background: #7f1d1d;
+    color: #fecaca;
 }
 
 /* Recipe grid */
