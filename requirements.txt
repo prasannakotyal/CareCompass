@@ -1,0 +1,23 @@
+# Core framework
+fastapi==0.109.0
+uvicorn==0.27.0
+
+# Templates and forms
+jinja2==3.1.3
+python-multipart==0.0.6
+
+# HTTP client
+httpx==0.26.0
+
+# Google Gemini AI
+google-genai==1.0.0
+
+# Session/security
+itsdangerous==2.1.2
+python-dotenv==1.0.1
+
+# Rate limiting
+slowapi==0.1.9
+
+# Pydantic (pin to avoid pydantic_core issues on Vercel)
+pydantic==2.5.3
