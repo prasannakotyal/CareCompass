@@ -383,7 +383,7 @@
                     errorMessage = 'No microphone found. Please connect a microphone and try again.';
                     break;
                 case 'network':
-                    errorMessage = 'Network error. Speech recognition requires an internet connection.';
+                    errorMessage = 'Network error. This may be caused by:\n• Brave shields blocking Google Speech API\n• No internet connection\n\nTry: Click the Brave shield icon and disable shields for this site.';
                     break;
                 case 'aborted':
                     // User or system aborted, this is fine
