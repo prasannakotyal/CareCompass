@@ -3,7 +3,7 @@
     {% for recipe in recipes %}
     <article class="recipe-card">
         {% if recipe.image %}
-        <img src="{{ recipe.image }}" alt="{{ recipe.title }}" loading="lazy">
+        <img src="{{ recipe.image }}" alt="{{ recipe.title }}" loading="lazy" onerror="this.style.display='none'">
         {% endif %}
         
         <header>
@@ -17,12 +17,13 @@
             <span class="macro-badge">F: {{ recipe.fat }}g</span>
         </div>
         
-        <p>
+        <p class="recipe-meta">
             {% if recipe.ready_in_minutes %}
-            <small>Ready in {{ recipe.ready_in_minutes }} min</small>
+            {{ recipe.ready_in_minutes }} min
             {% endif %}
+            {% if recipe.ready_in_minutes and recipe.servings %} · {% endif %}
             {% if recipe.servings %}
-            <small> | {{ recipe.servings }} servings</small>
+            {{ recipe.servings }} servings
             {% endif %}
         </p>
         
@@ -32,12 +33,12 @@
                         hx-post="/api/meals/track"
                         hx-target="#calorie-tracker"
                         hx-swap="innerHTML"
-                        hx-vals='{"title": "{{ recipe.title | e }}", "calories": {{ recipe.calories }}}'>
+                        hx-vals='{"title": "{{ recipe.title | replace("\"", "\\\"") | replace("'", "\\'") }}", "calories": {{ recipe.calories }}}'>
                     + Track
                 </button>
                 {% if recipe.source_url %}
-                <a href="{{ recipe.source_url }}" target="_blank" rel="noopener" role="button" class="secondary">
-                    View Recipe
+                <a href="{{ recipe.source_url }}" target="_blank" rel="noopener" role="button" class="secondary outline">
+                    View
                 </a>
                 {% endif %}
             </div>
@@ -46,5 +47,9 @@
     {% endfor %}
 </div>
 {% else %}
-<p class="secondary">No recipes found. Try a different search term or diet filter.</p>
+<div class="no-results">
+    <p><strong>No recipes found</strong></p>
+    <p>Try a different search term or remove the diet filter.</p>
+    <p><small>Tip: Use simpler terms like "chicken", "pasta", or "salad"</small></p>
+</div>
 {% endif %}

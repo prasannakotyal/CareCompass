@@ -1,6 +1,7 @@
 """Gemini AI service for medical chat."""
 
 import os
+from collections.abc import AsyncGenerator
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -25,6 +26,16 @@ Guidelines:
 Remember: You are an AI assistant, not a replacement for professional medical care."""
 
 
+def _build_conversation(message: str, history: list[dict]) -> str:
+    """Build conversation context string from history and current message."""
+    conversation = ""
+    for msg in history:
+        role = "User" if msg["role"] == "user" else "Assistant"
+        conversation += f"{role}: {msg['content']}\n"
+    conversation += f"User: {message}\nAssistant:"
+    return conversation
+
+
 def chat(message: str, history: list[dict]) -> str:
     """
     Send a message to Gemini and get a response.
@@ -37,21 +48,12 @@ def chat(message: str, history: list[dict]) -> str:
         Assistant's response text
     """
     try:
-        # Build conversation context
-        conversation = ""
-        for msg in history:
-            role = "User" if msg["role"] == "user" else "Assistant"
-            conversation += f"{role}: {msg['content']}\n"
+        conversation = _build_conversation(message, history)
 
-        # Add current message
-        conversation += f"User: {message}\nAssistant:"
-
-        # Create config with system instruction
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
         )
 
-        # Generate response
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=conversation,
@@ -62,6 +64,40 @@ def chat(message: str, history: list[dict]) -> str:
     except Exception as e:
         print(f"Gemini API error: {e}")
         return "I'm sorry, but I'm currently unable to process your request. Please try again later."
+
+
+async def chat_stream(message: str, history: list[dict]) -> AsyncGenerator[str, None]:
+    """
+    Stream a response from Gemini chunk by chunk.
+
+    Args:
+        message: User's message
+        history: List of previous messages
+
+    Yields:
+        Text chunks as they arrive from Gemini
+    """
+    try:
+        conversation = _build_conversation(message, history)
+
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+        )
+
+        # Use synchronous streaming (async streaming has issues with some versions)
+        response_stream = client.models.generate_content_stream(
+            model="gemini-2.5-flash",
+            contents=conversation,
+            config=config,
+        )
+
+        for chunk in response_stream:
+            if chunk.text:
+                yield chunk.text
+
+    except Exception as e:
+        print(f"Gemini API streaming error: {e}")
+        yield "I'm sorry, but I'm currently unable to process your request. Please try again later."
 
 
 def is_configured() -> bool:

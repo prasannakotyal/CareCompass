@@ -1,5 +1,6 @@
 """CareCompass - FastAPI Application."""
 
+import json
 import os
 import secrets
 from pathlib import Path
@@ -7,7 +8,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
@@ -134,7 +135,7 @@ async def meals_page(request: Request):
 
 @app.post("/api/chat", response_class=HTMLResponse)
 async def send_message(request: Request, message: str = Form(...)):
-    """Send a message to MediChat."""
+    """Send a message to MediChat (non-streaming fallback)."""
     # Get existing history
     history = get_session_data(request, "chat_history", [])
 
@@ -159,6 +160,69 @@ async def send_message(request: Request, message: str = Form(...)):
             "history": history,
         },
     )
+    set_session_cookie(response, "chat_history", history)
+
+    return response
+
+
+@app.post("/api/chat/stream")
+async def send_message_stream(request: Request, message: str = Form(...)):
+    """Stream a chat response via Server-Sent Events."""
+    # Get existing history
+    history = get_session_data(request, "chat_history", [])
+
+    async def generate_sse():
+        """Generate SSE events from Gemini stream."""
+        full_response = ""
+
+        try:
+            async for chunk in gemini.chat_stream(message, history):
+                full_response += chunk
+                # Send chunk as SSE event
+                data = json.dumps({"chunk": chunk})
+                yield f"data: {data}\n\n"
+
+            # Send completion event with full response
+            data = json.dumps({"done": True, "full_response": full_response})
+            yield f"data: {data}\n\n"
+
+        except Exception as e:
+            print(f"Streaming error: {e}")
+            error_msg = "I'm sorry, but I'm currently unable to process your request."
+            data = json.dumps({"chunk": error_msg, "done": True, "error": True})
+            yield f"data: {data}\n\n"
+
+    return StreamingResponse(
+        generate_sse(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )
+
+
+@app.post("/api/chat/save", response_class=HTMLResponse)
+async def save_chat(
+    request: Request,
+    user_message: str = Form(...),
+    assistant_message: str = Form(...),
+):
+    """Save chat messages to session after streaming completes."""
+    # Get existing history
+    history = get_session_data(request, "chat_history", [])
+
+    # Add both messages
+    history.append({"role": "user", "content": user_message})
+    history.append({"role": "assistant", "content": assistant_message})
+
+    # Keep only last 20 messages
+    if len(history) > 20:
+        history = history[-20:]
+
+    # Return empty response with updated cookie
+    response = HTMLResponse(content="", status_code=200)
     set_session_cookie(response, "chat_history", history)
 
     return response

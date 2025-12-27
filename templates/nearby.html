@@ -2,28 +2,45 @@
 
 {% block title %}Healthcare Finder - CareCompass{% endblock %}
 
+{% block head %}
+<style>
+    .error-message {
+        color: var(--pico-del-color);
+        padding: 1rem;
+        background: rgba(255, 0, 0, 0.1);
+        border-radius: var(--pico-border-radius);
+        margin-bottom: 1rem;
+    }
+    
+    .loading-overlay {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <hgroup>
     <h1>Healthcare Finder</h1>
     <p>Find hospitals, pharmacies, and clinics near your location.</p>
 </hgroup>
 
-<article x-data="locationFinder()">
+<article x-data="locationFinder()" x-init="init()">
     <header>
         <h3>Your Location</h3>
     </header>
     
     <div x-show="!locationGranted && !locationError">
         <p>We need your location to find nearby healthcare facilities.</p>
-        <button @click="getLocation()" :disabled="loading">
+        <button @click="getLocation()" :disabled="loading" :aria-busy="loading">
             <span x-show="!loading">Allow Location Access</span>
-            <span x-show="loading" aria-busy="true">Getting location...</span>
+            <span x-show="loading">Getting location...</span>
         </button>
     </div>
     
     <div x-show="locationError" class="error-message">
         <p x-text="locationError"></p>
-        <button @click="getLocation()" class="outline">Try Again</button>
+        <button @click="retryLocation()" class="outline">Try Again</button>
     </div>
     
     <div x-show="locationGranted">
@@ -32,7 +49,7 @@
         <fieldset>
             <legend>What are you looking for?</legend>
             <label>
-                <input type="checkbox" x-model="selectedTypes" value="hospital" checked>
+                <input type="checkbox" x-model="selectedTypes" value="hospital">
                 Hospitals
             </label>
             <label>
@@ -56,15 +73,17 @@
         <label for="radius">Search Radius</label>
         <select id="radius" x-model="radius">
             <option value="2000">2 km</option>
-            <option value="5000" selected>5 km</option>
+            <option value="5000">5 km</option>
             <option value="10000">10 km</option>
             <option value="20000">20 km</option>
         </select>
         
-        <button @click="search()" :disabled="searching || selectedTypes.length === 0">
+        <button @click="search()" :disabled="searching || selectedTypes.length === 0" :aria-busy="searching">
             <span x-show="!searching">Search Nearby</span>
-            <span x-show="searching" aria-busy="true">Searching...</span>
+            <span x-show="searching">Searching...</span>
         </button>
+        
+        <p x-show="searchError" class="error-message" x-text="searchError"></p>
     </div>
 </article>
 
@@ -81,10 +100,33 @@ function locationFinder() {
         locationError: null,
         loading: false,
         searching: false,
+        searchError: null,
         selectedTypes: ['hospital'],
         radius: '5000',
         
+        init() {
+            // Try to restore cached location from sessionStorage
+            const cached = sessionStorage.getItem('userLocation');
+            if (cached) {
+                try {
+                    const loc = JSON.parse(cached);
+                    this.lat = loc.lat;
+                    this.lon = loc.lon;
+                    this.locationGranted = true;
+                } catch (e) {
+                    // Ignore parse errors
+                }
+            }
+        },
+        
+        retryLocation() {
+            this.locationError = null;
+            this.getLocation();
+        },
+        
         getLocation() {
+            if (this.loading) return; // Prevent double-clicks
+            
             this.loading = true;
             this.locationError = null;
             
@@ -100,6 +142,12 @@ function locationFinder() {
                     this.lon = position.coords.longitude;
                     this.locationGranted = true;
                     this.loading = false;
+                    
+                    // Cache location in sessionStorage
+                    sessionStorage.setItem('userLocation', JSON.stringify({
+                        lat: this.lat,
+                        lon: this.lon
+                    }));
                 },
                 (error) => {
                     switch(error.code) {
@@ -110,32 +158,43 @@ function locationFinder() {
                             this.locationError = 'Location information is unavailable.';
                             break;
                         case error.TIMEOUT:
-                            this.locationError = 'Location request timed out.';
+                            this.locationError = 'Location request timed out. Please try again.';
                             break;
                         default:
-                            this.locationError = 'An unknown error occurred.';
+                            this.locationError = 'An unknown error occurred while getting your location.';
                     }
                     this.loading = false;
                 },
                 {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 300000 // 5 minutes
+                    enableHighAccuracy: false, // Faster response
+                    timeout: 15000,
+                    maximumAge: 300000 // 5 minutes cache
                 }
             );
         },
         
-        search() {
+        async search() {
+            if (this.searching) return; // Prevent double-clicks
+            
             this.searching = true;
+            this.searchError = null;
+            
             const types = this.selectedTypes.join(',');
             const url = `/api/nearby?lat=${this.lat}&lon=${this.lon}&radius=${this.radius}&types=${types}`;
             
-            htmx.ajax('GET', url, {
-                target: '#results',
-                swap: 'innerHTML'
-            }).then(() => {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+                const html = await response.text();
+                document.getElementById('results').innerHTML = html;
+            } catch (error) {
+                this.searchError = 'Failed to search. The service may be temporarily unavailable. Please try again.';
+                console.error('Search error:', error);
+            } finally {
                 this.searching = false;
-            });
+            }
         }
     }
 }

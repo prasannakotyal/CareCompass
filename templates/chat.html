@@ -38,6 +38,69 @@
         opacity: 0.7;
     }
     
+    /* Markdown content styles */
+    .message-content {
+        line-height: 1.6;
+    }
+    
+    .message-content p {
+        margin: 0 0 0.75rem 0;
+    }
+    
+    .message-content p:last-child {
+        margin-bottom: 0;
+    }
+    
+    .message-content ul,
+    .message-content ol {
+        margin: 0.5rem 0;
+        padding-left: 1.5rem;
+    }
+    
+    .message-content li {
+        margin-bottom: 0.25rem;
+    }
+    
+    .message-content strong {
+        font-weight: 600;
+    }
+    
+    .message-content h1,
+    .message-content h2,
+    .message-content h3,
+    .message-content h4 {
+        margin: 0.75rem 0 0.5rem 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .message-content code {
+        background: rgba(0,0,0,0.1);
+        padding: 0.1rem 0.3rem;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+    
+    .message-content pre {
+        background: rgba(0,0,0,0.1);
+        padding: 0.75rem;
+        border-radius: var(--pico-border-radius);
+        overflow-x: auto;
+        margin: 0.5rem 0;
+    }
+    
+    .message-content pre code {
+        background: none;
+        padding: 0;
+    }
+    
+    .message-content blockquote {
+        border-left: 3px solid var(--pico-primary);
+        margin: 0.5rem 0;
+        padding-left: 1rem;
+        font-style: italic;
+    }
+    
     .chat-input-form {
         display: flex;
         gap: 0.5rem;
@@ -51,6 +114,64 @@
         width: auto;
         margin-bottom: 0;
     }
+    
+    .chat-input-form button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    /* Typing indicator */
+    .typing-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .typing-indicator span {
+        width: 6px;
+        height: 6px;
+        background: var(--pico-muted-color);
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+        30% { transform: translateY(-4px); opacity: 1; }
+    }
+    
+    /* Streaming cursor effect */
+    .streaming-cursor::after {
+        content: '▋';
+        animation: blink 1s infinite;
+        margin-left: 2px;
+    }
+    
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+    }
+    
+    /* Header disclaimer */
+    .header-disclaimer {
+        font-size: 0.75rem;
+        color: var(--pico-muted-color);
+        margin-top: 0.25rem;
+    }
+    
+    .chat-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
 </style>
 {% endblock %}
 
@@ -58,6 +179,7 @@
 <hgroup>
     <h1>MediChat</h1>
     <p>Your AI-powered medical assistant. Ask any health-related questions!</p>
+    <p class="header-disclaimer">⚠️ AI assistant only - not a substitute for professional medical advice</p>
 </hgroup>
 
 {% if not is_configured %}
@@ -68,15 +190,16 @@
 
 <div class="chat-container" id="chat-container">
     <div id="chat-messages">
-        {% include "partials/chat_messages.html" %}
+        {% for msg in history %}
+        <div class="message {{ msg.role }}">
+            <div class="message-role">{{ 'You' if msg.role == 'user' else 'MediChat' }}</div>
+            <div class="message-content">{{ msg.content }}</div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
-<form class="chat-input-form"
-      hx-post="/api/chat"
-      hx-target="#chat-messages"
-      hx-swap="innerHTML"
-      hx-on::after-request="document.getElementById('message-input').value = ''; document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;">
+<form class="chat-input-form" id="chat-form" onsubmit="return handleSubmit(event)">
     <input type="text" 
            id="message-input"
            name="message" 
@@ -84,28 +207,255 @@
            required
            autocomplete="off"
            {% if not is_configured %}disabled{% endif %}>
-    <button type="submit" {% if not is_configured %}disabled{% endif %}>Send</button>
+    <button type="submit" id="send-btn" {% if not is_configured %}disabled{% endif %}>Send</button>
 </form>
 
-<button class="outline secondary"
-        hx-post="/api/chat/clear"
-        hx-target="#chat-messages"
-        hx-swap="innerHTML">
-    Clear Conversation
-</button>
-
-<details>
-    <summary>Disclaimer</summary>
-    <p>MediChat is an AI assistant designed to provide general health information. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.</p>
-</details>
+<div class="chat-actions">
+    <button class="outline secondary" id="clear-btn" onclick="clearChat()">
+        Clear Conversation
+    </button>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Auto-scroll to bottom on page load
+    // Configure marked for safe rendering
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+    
+    const chatContainer = document.getElementById('chat-container');
+    const chatMessages = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    
+    let isStreaming = false;
+    let currentUserMessage = '';
+    let currentAssistantMessage = '';
+    
+    // Scroll to bottom
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    
+    // Render markdown in an element
+    function renderMarkdown(element, text) {
+        element.innerHTML = marked.parse(text);
+    }
+    
+    // Add a message to the chat UI
+    function addMessage(role, content, isStreaming = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}`;
+        
+        const roleDiv = document.createElement('div');
+        roleDiv.className = 'message-role';
+        roleDiv.textContent = role === 'user' ? 'You' : 'MediChat';
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        if (isStreaming) {
+            contentDiv.classList.add('streaming-cursor');
+        }
+        
+        if (role === 'assistant' && content) {
+            renderMarkdown(contentDiv, content);
+        } else {
+            contentDiv.textContent = content;
+        }
+        
+        messageDiv.appendChild(roleDiv);
+        messageDiv.appendChild(contentDiv);
+        chatMessages.appendChild(messageDiv);
+        
+        scrollToBottom();
+        return contentDiv;
+    }
+    
+    // Add typing indicator
+    function addTypingIndicator() {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+        messageDiv.id = 'typing-indicator';
+        
+        const roleDiv = document.createElement('div');
+        roleDiv.className = 'message-role';
+        roleDiv.textContent = 'MediChat';
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+        
+        messageDiv.appendChild(roleDiv);
+        messageDiv.appendChild(contentDiv);
+        chatMessages.appendChild(messageDiv);
+        
+        scrollToBottom();
+        return messageDiv;
+    }
+    
+    // Remove typing indicator
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+    
+    // Handle form submission
+    async function handleSubmit(event) {
+        event.preventDefault();
+        
+        if (isStreaming) return false;
+        
+        const message = messageInput.value.trim();
+        if (!message) return false;
+        
+        // Reset and disable input
+        messageInput.value = '';
+        messageInput.disabled = true;
+        sendBtn.disabled = true;
+        clearBtn.disabled = true;
+        isStreaming = true;
+        currentUserMessage = message;
+        currentAssistantMessage = '';
+        
+        // Add user message immediately
+        addMessage('user', message);
+        
+        // Add typing indicator
+        addTypingIndicator();
+        
+        try {
+            // Create form data
+            const formData = new FormData();
+            formData.append('message', message);
+            
+            // Start streaming request
+            const response = await fetch('/api/chat/stream', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Stream request failed');
+            }
+            
+            // Remove typing indicator and create assistant message bubble
+            removeTypingIndicator();
+            const assistantContent = addMessage('assistant', '', true);
+            
+            // Read the stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const text = decoder.decode(value, { stream: true });
+                
+                // Parse SSE data lines
+                const lines = text.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.chunk) {
+                                currentAssistantMessage += data.chunk;
+                                renderMarkdown(assistantContent, currentAssistantMessage);
+                                scrollToBottom();
+                            }
+                            
+                            if (data.done) {
+                                // Remove streaming cursor
+                                assistantContent.classList.remove('streaming-cursor');
+                                
+                                // Save conversation to session
+                                await saveConversation(currentUserMessage, currentAssistantMessage);
+                            }
+                        } catch (e) {
+                            // Ignore JSON parse errors for partial data
+                        }
+                    }
+                }
+            }
+            
+            // Ensure cursor is removed
+            assistantContent.classList.remove('streaming-cursor');
+            
+        } catch (error) {
+            console.error('Streaming error:', error);
+            removeTypingIndicator();
+            addMessage('assistant', 'I\'m sorry, but I\'m currently unable to process your request. Please try again.');
+        } finally {
+            // Re-enable input
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            clearBtn.disabled = false;
+            isStreaming = false;
+            messageInput.focus();
+        }
+        
+        return false;
+    }
+    
+    // Save conversation to session
+    async function saveConversation(userMessage, assistantMessage) {
+        try {
+            const formData = new FormData();
+            formData.append('user_message', userMessage);
+            formData.append('assistant_message', assistantMessage);
+            
+            await fetch('/api/chat/save', {
+                method: 'POST',
+                body: formData
+            });
+        } catch (error) {
+            console.error('Failed to save conversation:', error);
+        }
+    }
+    
+    // Clear chat
+    async function clearChat() {
+        try {
+            const response = await fetch('/api/chat/clear', {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                const html = await response.text();
+                chatMessages.innerHTML = html;
+                // Re-render markdown for the initial message
+                document.querySelectorAll('.message.assistant .message-content').forEach(el => {
+                    const text = el.textContent;
+                    el.innerHTML = marked.parse(text);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to clear chat:', error);
+        }
+    }
+    
+    // Render markdown for all existing assistant messages on page load
     document.addEventListener('DOMContentLoaded', function() {
-        const container = document.getElementById('chat-container');
-        container.scrollTop = container.scrollHeight;
+        document.querySelectorAll('.message.assistant .message-content').forEach(el => {
+            const text = el.textContent;
+            renderMarkdown(el, text);
+        });
+        scrollToBottom();
+        messageInput.focus();
+    });
+    
+    // Handle Enter key
+    messageInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey && !isStreaming) {
+            e.preventDefault();
+            document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+        }
     });
 </script>
 {% endblock %}

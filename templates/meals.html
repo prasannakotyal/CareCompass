@@ -2,6 +2,133 @@
 
 {% block title %}Meal Planner - CareCompass{% endblock %}
 
+{% block head %}
+<style>
+    .htmx-indicator {
+        display: none;
+    }
+    .htmx-request .htmx-indicator {
+        display: block;
+    }
+    .htmx-request.htmx-indicator {
+        display: block;
+    }
+    
+    .recipe-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .recipe-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        margin: 0;
+    }
+    
+    .recipe-card img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: var(--pico-border-radius) var(--pico-border-radius) 0 0;
+        margin: -1rem -1rem 1rem -1rem;
+        width: calc(100% + 2rem);
+    }
+    
+    .recipe-card header {
+        padding: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .recipe-card header h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .recipe-card .nutrition {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .macro-badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        background: var(--pico-muted-background);
+        border-radius: var(--pico-border-radius);
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+    
+    .recipe-card .recipe-meta {
+        font-size: 0.85rem;
+        color: var(--pico-muted-color);
+        margin-bottom: 0.75rem;
+    }
+    
+    .recipe-card footer {
+        margin-top: auto;
+        padding: 0;
+    }
+    
+    .recipe-card footer .grid {
+        gap: 0.5rem;
+    }
+    
+    .recipe-card footer button,
+    .recipe-card footer a[role="button"] {
+        margin: 0;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .calorie-total {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--pico-primary);
+    }
+    
+    .tracked-meal {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--pico-muted-border-color);
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 2rem;
+        color: var(--pico-muted-color);
+    }
+    
+    .no-results p {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Meal plan cards */
+    .meal-plan-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .meal-plan-card img {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        border-radius: var(--pico-border-radius);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <hgroup>
     <h1>Meal Planner</h1>
@@ -29,10 +156,10 @@
                 <input type="text" 
                        id="query" 
                        name="query" 
-                       placeholder="e.g., chicken salad, pasta..."
+                       placeholder="e.g., chicken, pasta, salad..."
                        {% if not is_configured %}disabled{% endif %}>
                 
-                <label for="diet">Diet Type</label>
+                <label for="diet">Diet Type <small>(optional - may limit results)</small></label>
                 <select id="diet" name="diet" {% if not is_configured %}disabled{% endif %}>
                     {% for diet in diet_types %}
                     <option value="{{ diet.value }}">{{ diet.label }}</option>
@@ -102,60 +229,4 @@
         <p class="secondary">Search for recipes above to see results here.</p>
     </div>
 </section>
-{% endblock %}
-
-{% block head %}
-<style>
-    .htmx-indicator {
-        display: none;
-    }
-    .htmx-request .htmx-indicator {
-        display: block;
-    }
-    .htmx-request.htmx-indicator {
-        display: block;
-    }
-    
-    .recipe-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1rem;
-    }
-    
-    .recipe-card img {
-        width: 100%;
-        height: 180px;
-        object-fit: cover;
-        border-radius: var(--pico-border-radius);
-    }
-    
-    .recipe-card .nutrition {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.875rem;
-        color: var(--pico-muted-color);
-    }
-    
-    .macro-badge {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        background: var(--pico-muted-background);
-        border-radius: var(--pico-border-radius);
-        font-size: 0.75rem;
-        margin-right: 0.25rem;
-    }
-    
-    .calorie-total {
-        font-size: 2rem;
-        font-weight: bold;
-        color: var(--pico-primary);
-    }
-    
-    .tracked-meal {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--pico-muted-border-color);
-    }
-</style>
 {% endblock %}
