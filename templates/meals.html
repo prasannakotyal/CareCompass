@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Meal Planner - CareCompass{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Meal Planner</h1>
+    <p>Find healthy recipes and track your daily calories.</p>
+</hgroup>
+
+{% if not is_configured %}
+<article class="warning">
+    <p><strong>API Not Configured:</strong> Please set your SPOONACULAR_API_KEY environment variable to enable recipe search.</p>
+</article>
+{% endif %}
+
+<div class="grid">
+    <div>
+        <article>
+            <header>
+                <h3>Recipe Search</h3>
+            </header>
+            
+            <form hx-get="/api/recipes" 
+                  hx-target="#recipe-results" 
+                  hx-swap="innerHTML"
+                  hx-indicator="#search-indicator">
+                <label for="query">Search for recipes</label>
+                <input type="text" 
+                       id="query" 
+                       name="query" 
+                       placeholder="e.g., chicken salad, pasta..."
+                       {% if not is_configured %}disabled{% endif %}>
+                
+                <label for="diet">Diet Type</label>
+                <select id="diet" name="diet" {% if not is_configured %}disabled{% endif %}>
+                    {% for diet in diet_types %}
+                    <option value="{{ diet.value }}">{{ diet.label }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button type="submit" {% if not is_configured %}disabled{% endif %}>
+                    Search Recipes
+                </button>
+            </form>
+            
+            <p id="search-indicator" class="htmx-indicator" aria-busy="true">Searching recipes...</p>
+        </article>
+        
+        <article>
+            <header>
+                <h3>Generate Meal Plan</h3>
+            </header>
+            
+            <form hx-get="/api/mealplan" 
+                  hx-target="#mealplan-results" 
+                  hx-swap="innerHTML"
+                  hx-indicator="#mealplan-indicator">
+                <label for="calories">Target Daily Calories</label>
+                <input type="number" 
+                       id="calories" 
+                       name="calories" 
+                       value="2000" 
+                       min="1200" 
+                       max="4000"
+                       {% if not is_configured %}disabled{% endif %}>
+                
+                <label for="plan-diet">Diet Type</label>
+                <select id="plan-diet" name="diet" {% if not is_configured %}disabled{% endif %}>
+                    {% for diet in diet_types %}
+                    <option value="{{ diet.value }}">{{ diet.label }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button type="submit" {% if not is_configured %}disabled{% endif %}>
+                    Generate Plan
+                </button>
+            </form>
+            
+            <p id="mealplan-indicator" class="htmx-indicator" aria-busy="true">Generating meal plan...</p>
+            
+            <div id="mealplan-results"></div>
+        </article>
+    </div>
+    
+    <div>
+        <article>
+            <header>
+                <h3>Today's Calorie Tracker</h3>
+            </header>
+            
+            <div id="calorie-tracker">
+                {% include "partials/calorie_tracker.html" %}
+            </div>
+        </article>
+    </div>
+</div>
+
+<section>
+    <h3>Recipe Results</h3>
+    <div id="recipe-results">
+        <p class="secondary">Search for recipes above to see results here.</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block head %}
+<style>
+    .htmx-indicator {
+        display: none;
+    }
+    .htmx-request .htmx-indicator {
+        display: block;
+    }
+    .htmx-request.htmx-indicator {
+        display: block;
+    }
+    
+    .recipe-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+    
+    .recipe-card img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: var(--pico-border-radius);
+    }
+    
+    .recipe-card .nutrition {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        color: var(--pico-muted-color);
+    }
+    
+    .macro-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: var(--pico-muted-background);
+        border-radius: var(--pico-border-radius);
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+    }
+    
+    .calorie-total {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--pico-primary);
+    }
+    
+    .tracked-meal {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--pico-muted-border-color);
+    }
+</style>
+{% endblock %}

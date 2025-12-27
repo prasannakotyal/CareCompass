@@ -1,0 +1,22 @@
+<div class="calorie-total">{{ total_calories }} cal</div>
+<p class="secondary">Total calories tracked today</p>
+
+{% if tracked_meals %}
+<hr>
+{% for meal in tracked_meals %}
+<div class="tracked-meal">
+    <span>{{ meal.title }}</span>
+    <span>{{ meal.calories }} cal</span>
+</div>
+{% endfor %}
+
+<button class="outline secondary" 
+        style="margin-top: 1rem;"
+        hx-post="/api/meals/clear"
+        hx-target="#calorie-tracker"
+        hx-swap="innerHTML">
+    Clear All
+</button>
+{% else %}
+<p><small>Track meals from recipes to see them here.</small></p>
+{% endif %}

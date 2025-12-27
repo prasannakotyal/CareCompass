@@ -1,0 +1,50 @@
+{% if recipes %}
+<div class="recipe-grid">
+    {% for recipe in recipes %}
+    <article class="recipe-card">
+        {% if recipe.image %}
+        <img src="{{ recipe.image }}" alt="{{ recipe.title }}" loading="lazy">
+        {% endif %}
+        
+        <header>
+            <h4>{{ recipe.title }}</h4>
+        </header>
+        
+        <div class="nutrition">
+            <span class="macro-badge">{{ recipe.calories }} cal</span>
+            <span class="macro-badge">P: {{ recipe.protein }}g</span>
+            <span class="macro-badge">C: {{ recipe.carbs }}g</span>
+            <span class="macro-badge">F: {{ recipe.fat }}g</span>
+        </div>
+        
+        <p>
+            {% if recipe.ready_in_minutes %}
+            <small>Ready in {{ recipe.ready_in_minutes }} min</small>
+            {% endif %}
+            {% if recipe.servings %}
+            <small> | {{ recipe.servings }} servings</small>
+            {% endif %}
+        </p>
+        
+        <footer>
+            <div class="grid">
+                <button class="outline"
+                        hx-post="/api/meals/track"
+                        hx-target="#calorie-tracker"
+                        hx-swap="innerHTML"
+                        hx-vals='{"title": "{{ recipe.title | e }}", "calories": {{ recipe.calories }}}'>
+                    + Track
+                </button>
+                {% if recipe.source_url %}
+                <a href="{{ recipe.source_url }}" target="_blank" rel="noopener" role="button" class="secondary">
+                    View Recipe
+                </a>
+                {% endif %}
+            </div>
+        </footer>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<p class="secondary">No recipes found. Try a different search term or diet filter.</p>
+{% endif %}

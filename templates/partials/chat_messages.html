@@ -1,0 +1,6 @@
+{% for msg in history %}
+<div class="message {{ msg.role }}">
+    <div class="message-role">{{ 'You' if msg.role == 'user' else 'MediChat' }}</div>
+    <div class="message-content">{{ msg.content }}</div>
+</div>
+{% endfor %}

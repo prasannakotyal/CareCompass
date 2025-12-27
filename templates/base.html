@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CareCompass{% endblock %}</title>
+    
+    <!-- Pico CSS for responsive styling -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    
+    <!-- HTMX for dynamic content -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js for reactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="container">
+        <nav>
+            <ul>
+                <li><a href="/" class="contrast"><strong>CareCompass</strong></a></li>
+            </ul>
+            <ul>
+                <li><a href="/chat">MediChat</a></li>
+                <li><a href="/nearby">Healthcare Finder</a></li>
+                <li><a href="/meals">Meal Planner</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="container">
+        <small>
+            <p>CareCompass - Your holistic health companion. 
+            <em>Note: This is not a substitute for professional medical advice.</em></p>
+        </small>
+    </footer>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

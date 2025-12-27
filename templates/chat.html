@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}MediChat - CareCompass{% endblock %}
+
+{% block head %}
+<style>
+    .chat-container {
+        height: 60vh;
+        overflow-y: auto;
+        padding: 1rem;
+        border: 1px solid var(--pico-muted-border-color);
+        border-radius: var(--pico-border-radius);
+        margin-bottom: 1rem;
+        background: var(--pico-background-color);
+    }
+    
+    .message {
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--pico-border-radius);
+        max-width: 80%;
+    }
+    
+    .message.user {
+        background: var(--pico-primary-background);
+        color: var(--pico-primary-inverse);
+        margin-left: auto;
+    }
+    
+    .message.assistant {
+        background: var(--pico-muted-background);
+    }
+    
+    .message-role {
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+        opacity: 0.7;
+    }
+    
+    .chat-input-form {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .chat-input-form input {
+        margin-bottom: 0;
+    }
+    
+    .chat-input-form button {
+        width: auto;
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>MediChat</h1>
+    <p>Your AI-powered medical assistant. Ask any health-related questions!</p>
+</hgroup>
+
+{% if not is_configured %}
+<article class="warning">
+    <p><strong>API Not Configured:</strong> Please set your GEMINI_API_KEY environment variable to enable the chatbot.</p>
+</article>
+{% endif %}
+
+<div class="chat-container" id="chat-container">
+    <div id="chat-messages">
+        {% include "partials/chat_messages.html" %}
+    </div>
+</div>
+
+<form class="chat-input-form"
+      hx-post="/api/chat"
+      hx-target="#chat-messages"
+      hx-swap="innerHTML"
+      hx-on::after-request="document.getElementById('message-input').value = ''; document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;">
+    <input type="text" 
+           id="message-input"
+           name="message" 
+           placeholder="Type your health question..." 
+           required
+           autocomplete="off"
+           {% if not is_configured %}disabled{% endif %}>
+    <button type="submit" {% if not is_configured %}disabled{% endif %}>Send</button>
+</form>
+
+<button class="outline secondary"
+        hx-post="/api/chat/clear"
+        hx-target="#chat-messages"
+        hx-swap="innerHTML">
+    Clear Conversation
+</button>
+
+<details>
+    <summary>Disclaimer</summary>
+    <p>MediChat is an AI assistant designed to provide general health information. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.</p>
+</details>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-scroll to bottom on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('chat-container');
+        container.scrollTop = container.scrollHeight;
+    });
+</script>
+{% endblock %}

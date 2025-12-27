@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}CareCompass - Your Health Companion{% endblock %}
+
+{% block content %}
+<article class="hero">
+    <hgroup>
+        <h1>Welcome to CareCompass</h1>
+        <p>Your holistic health companion for medical questions, healthcare locations, and meal planning.</p>
+    </hgroup>
+</article>
+
+<div class="grid">
+    <article>
+        <header>
+            <hgroup>
+                <h3>MediChat</h3>
+                <p>AI Medical Assistant</p>
+            </hgroup>
+        </header>
+        <p>Ask health-related questions and get helpful information from our AI assistant. Perfect for general health queries and wellness tips.</p>
+        <footer>
+            <a href="/chat" role="button">Start Chatting</a>
+        </footer>
+    </article>
+    
+    <article>
+        <header>
+            <hgroup>
+                <h3>Healthcare Finder</h3>
+                <p>Find Nearby Facilities</p>
+            </hgroup>
+        </header>
+        <p>Locate hospitals, pharmacies, clinics, and other healthcare facilities near your current location using real-time geolocation.</p>
+        <footer>
+            <a href="/nearby" role="button">Find Healthcare</a>
+        </footer>
+    </article>
+    
+    <article>
+        <header>
+            <hgroup>
+                <h3>Meal Planner</h3>
+                <p>Recipes & Calorie Tracking</p>
+            </hgroup>
+        </header>
+        <p>Discover healthy recipes based on your dietary preferences and track your daily calorie intake with our easy-to-use planner.</p>
+        <footer>
+            <a href="/meals" role="button">Plan Meals</a>
+        </footer>
+    </article>
+</div>
+{% endblock %}

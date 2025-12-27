@@ -1,0 +1,122 @@
+/* Custom styles for CareCompass */
+
+/* Hero section on home page */
+.hero {
+    text-align: center;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Warning/error articles */
+article.warning {
+    border-left: 4px solid #f59e0b;
+    background: #fef3c7;
+}
+
+article.warning p {
+    margin: 0;
+    color: #92400e;
+}
+
+/* Error message styling */
+.error-message {
+    padding: 1rem;
+    background: #fee2e2;
+    border-radius: var(--pico-border-radius);
+    color: #991b1b;
+}
+
+/* Recipe grid */
+.recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.recipe-card {
+    margin-bottom: 0;
+}
+
+.recipe-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: var(--pico-border-radius);
+}
+
+.recipe-card header {
+    padding-bottom: 0.5rem;
+}
+
+.recipe-card header h4 {
+    margin-bottom: 0;
+    font-size: 1rem;
+}
+
+.recipe-card .nutrition {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Macro badges */
+.macro-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--pico-muted-background);
+    border-radius: var(--pico-border-radius);
+    font-size: 0.75rem;
+}
+
+/* Calorie tracker */
+.calorie-total {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--pico-primary);
+}
+
+.tracked-meal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+.tracked-meal:last-of-type {
+    border-bottom: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+    
+    header nav ul:last-child {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.25rem;
+    }
+    
+    .recipe-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* HTMX loading indicator */
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: block;
+}
+
+/* Smooth transitions for HTMX swaps */
+.htmx-swapping {
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+}

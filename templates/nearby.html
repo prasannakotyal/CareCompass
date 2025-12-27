@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Healthcare Finder - CareCompass{% endblock %}
+
+{% block content %}
+<hgroup>
+    <h1>Healthcare Finder</h1>
+    <p>Find hospitals, pharmacies, and clinics near your location.</p>
+</hgroup>
+
+<article x-data="locationFinder()">
+    <header>
+        <h3>Your Location</h3>
+    </header>
+    
+    <div x-show="!locationGranted && !locationError">
+        <p>We need your location to find nearby healthcare facilities.</p>
+        <button @click="getLocation()" :disabled="loading">
+            <span x-show="!loading">Allow Location Access</span>
+            <span x-show="loading" aria-busy="true">Getting location...</span>
+        </button>
+    </div>
+    
+    <div x-show="locationError" class="error-message">
+        <p x-text="locationError"></p>
+        <button @click="getLocation()" class="outline">Try Again</button>
+    </div>
+    
+    <div x-show="locationGranted">
+        <p><strong>Location found!</strong> Latitude: <span x-text="lat.toFixed(4)"></span>, Longitude: <span x-text="lon.toFixed(4)"></span></p>
+        
+        <fieldset>
+            <legend>What are you looking for?</legend>
+            <label>
+                <input type="checkbox" x-model="selectedTypes" value="hospital" checked>
+                Hospitals
+            </label>
+            <label>
+                <input type="checkbox" x-model="selectedTypes" value="pharmacy">
+                Pharmacies
+            </label>
+            <label>
+                <input type="checkbox" x-model="selectedTypes" value="clinic">
+                Clinics
+            </label>
+            <label>
+                <input type="checkbox" x-model="selectedTypes" value="doctors">
+                Doctor's Offices
+            </label>
+            <label>
+                <input type="checkbox" x-model="selectedTypes" value="dentist">
+                Dentists
+            </label>
+        </fieldset>
+        
+        <label for="radius">Search Radius</label>
+        <select id="radius" x-model="radius">
+            <option value="2000">2 km</option>
+            <option value="5000" selected>5 km</option>
+            <option value="10000">10 km</option>
+            <option value="20000">20 km</option>
+        </select>
+        
+        <button @click="search()" :disabled="searching || selectedTypes.length === 0">
+            <span x-show="!searching">Search Nearby</span>
+            <span x-show="searching" aria-busy="true">Searching...</span>
+        </button>
+    </div>
+</article>
+
+<div id="results"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function locationFinder() {
+    return {
+        lat: 0,
+        lon: 0,
+        locationGranted: false,
+        locationError: null,
+        loading: false,
+        searching: false,
+        selectedTypes: ['hospital'],
+        radius: '5000',
+        
+        getLocation() {
+            this.loading = true;
+            this.locationError = null;
+            
+            if (!navigator.geolocation) {
+                this.locationError = 'Geolocation is not supported by your browser.';
+                this.loading = false;
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    this.lat = position.coords.latitude;
+                    this.lon = position.coords.longitude;
+                    this.locationGranted = true;
+                    this.loading = false;
+                },
+                (error) => {
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            this.locationError = 'Location permission denied. Please enable location access in your browser settings.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            this.locationError = 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            this.locationError = 'Location request timed out.';
+                            break;
+                        default:
+                            this.locationError = 'An unknown error occurred.';
+                    }
+                    this.loading = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // 5 minutes
+                }
+            );
+        },
+        
+        search() {
+            this.searching = true;
+            const types = this.selectedTypes.join(',');
+            const url = `/api/nearby?lat=${this.lat}&lon=${this.lon}&radius=${this.radius}&types=${types}`;
+            
+            htmx.ajax('GET', url, {
+                target: '#results',
+                swap: 'innerHTML'
+            }).then(() => {
+                this.searching = false;
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

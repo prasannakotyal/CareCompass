@@ -1,0 +1,81 @@
+{% if places %}
+<article>
+    <header>
+        <h3>Found {{ places|length }} healthcare facilities nearby</h3>
+    </header>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Distance</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for place in places %}
+            <tr>
+                <td>
+                    <strong>{{ place.name }}</strong>
+                    {% if place.address %}
+                    <br><small class="secondary">{{ place.address }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="type-badge type-{{ place.type }}">
+                        {{ place.type | capitalize }}
+                    </span>
+                    {% if place.emergency %}
+                    <span class="emergency-badge">24/7</span>
+                    {% endif %}
+                </td>
+                <td>{{ place.distance_km }} km</td>
+                <td>
+                    {% if place.phone %}
+                    <a href="tel:{{ place.phone }}">{{ place.phone }}</a><br>
+                    {% endif %}
+                    {% if place.website %}
+                    <a href="{{ place.website }}" target="_blank" rel="noopener">Website</a>
+                    {% endif %}
+                    {% if place.opening_hours %}
+                    <br><small>{{ place.opening_hours }}</small>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</article>
+
+<style>
+    .type-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--pico-border-radius);
+        font-size: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    .type-hospital { background: #fee2e2; color: #991b1b; }
+    .type-pharmacy { background: #dcfce7; color: #166534; }
+    .type-clinic { background: #dbeafe; color: #1e40af; }
+    .type-doctors { background: #fef3c7; color: #92400e; }
+    .type-dentist { background: #f3e8ff; color: #7c3aed; }
+    
+    .emergency-badge {
+        display: inline-block;
+        padding: 0.125rem 0.375rem;
+        background: #dc2626;
+        color: white;
+        border-radius: var(--pico-border-radius);
+        font-size: 0.625rem;
+        font-weight: bold;
+        margin-left: 0.25rem;
+    }
+</style>
+{% else %}
+<article>
+    <p>No healthcare facilities found in this area. Try increasing the search radius.</p>
+</article>
+{% endif %}

@@ -1,0 +1,31 @@
+{% if meal_plan and meal_plan.meals %}
+<h4>Today's Meal Plan</h4>
+
+{% for meal in meal_plan.meals %}
+<div class="tracked-meal">
+    <span>
+        <strong>{{ meal.title }}</strong>
+        {% if meal.ready_in_minutes %}
+        <br><small>{{ meal.ready_in_minutes }} min</small>
+        {% endif %}
+    </span>
+    {% if meal.source_url %}
+    <a href="{{ meal.source_url }}" target="_blank" rel="noopener">View</a>
+    {% endif %}
+</div>
+{% endfor %}
+
+{% if meal_plan.nutrients %}
+<div style="margin-top: 1rem; padding: 1rem; background: var(--pico-muted-background); border-radius: var(--pico-border-radius);">
+    <strong>Daily Totals:</strong>
+    <div class="nutrition" style="margin-top: 0.5rem;">
+        <span class="macro-badge">{{ meal_plan.nutrients.calories }} cal</span>
+        <span class="macro-badge">P: {{ meal_plan.nutrients.protein }}g</span>
+        <span class="macro-badge">C: {{ meal_plan.nutrients.carbs }}g</span>
+        <span class="macro-badge">F: {{ meal_plan.nutrients.fat }}g</span>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<p class="secondary">Could not generate meal plan. Try again.</p>
+{% endif %}
