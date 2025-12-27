@@ -324,47 +324,110 @@
     }
     
     function toggleVoiceInput() {
-        if (!speechSupported) return;
+        if (!speechSupported) {
+            alert('Speech recognition is not supported in your browser. Try Chrome or Edge.');
+            return;
+        }
         
-        if (isListening) {
+        if (isListening && recognition) {
             recognition.stop();
             return;
         }
         
+        // Create new recognition instance
         recognition = new SpeechRecognition();
-        recognition.continuous = false;
+        recognition.continuous = true;  // Keep listening until manually stopped
         recognition.interimResults = true;
         recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
         
         recognition.onstart = () => {
             isListening = true;
             voiceBtn.classList.add('recording');
-            voiceBtn.innerHTML = '&#9899;'; // Recording dot
-            messageInput.placeholder = 'Listening...';
+            voiceBtn.innerHTML = '&#9209;'; // Stop/pause icon
+            voiceBtn.title = 'Click to stop recording';
+            messageInput.placeholder = 'Listening... Click mic to stop';
+            messageInput.value = '';
         };
         
         recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            messageInput.value = transcript;
+            let finalTranscript = '';
+            let interimTranscript = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+            
+            // Show interim results while speaking, final when done
+            messageInput.value = finalTranscript || interimTranscript;
         };
         
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
+            
+            let errorMessage = '';
+            switch(event.error) {
+                case 'not-allowed':
+                    errorMessage = 'Microphone access denied. Please allow microphone access in your browser settings.';
+                    break;
+                case 'no-speech':
+                    // This is normal - just means no speech detected yet, don't stop
+                    console.log('No speech detected, continuing to listen...');
+                    return; // Don't stop listening
+                case 'audio-capture':
+                    errorMessage = 'No microphone found. Please connect a microphone and try again.';
+                    break;
+                case 'network':
+                    errorMessage = 'Network error. Speech recognition requires an internet connection.';
+                    break;
+                case 'aborted':
+                    // User or system aborted, this is fine
+                    break;
+                default:
+                    errorMessage = 'Speech recognition error: ' + event.error;
+            }
+            
+            if (errorMessage) {
+                alert(errorMessage);
+            }
             stopListening();
         };
         
         recognition.onend = () => {
-            stopListening();
+            // Only stop if we were actually listening (not an error case)
+            if (isListening) {
+                stopListening();
+            }
         };
         
-        recognition.start();
+        // Start listening
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error('Failed to start speech recognition:', e);
+            alert('Failed to start speech recognition. Please try again.');
+            stopListening();
+        }
     }
     
     function stopListening() {
         isListening = false;
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch (e) {
+                // Ignore errors when stopping
+            }
+        }
         if (voiceBtn) {
             voiceBtn.classList.remove('recording');
             voiceBtn.innerHTML = '&#127908;'; // Microphone emoji
+            voiceBtn.title = 'Voice input';
         }
         messageInput.placeholder = 'Type your health question...';
     }
